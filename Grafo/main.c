@@ -22,14 +22,16 @@ int inserir_aresta(Grafo* gr, int orig, int dest, int eh_digrafo, float peso);
 void liberar_grafo(Grafo* gr);
 int procura_menor_distancia(float* dist, int* visitado, int nv);
 void menor_caminho(Grafo* gr, int ini, int* ant, float* dist);
+void alg_guloso(Grafo *gr, int ini, int* ant, float* dist);
+int menor_guloso(Grafo* gr, int ini, int* visitado);
 
 int main() {
-    int num_vertices, grau_max, eh_ponderado, inserir, orig, dest, eh_digrafo;
+    //int num_vertices, grau_max, eh_ponderado, inserir, orig, dest, eh_digrafo;
     int v_origem, v_destino, aux;
     float peso = 1.0;
     Grafo *gr;
 
-    printf("Digite a quantidade de vertices do grafo:  ");
+    /*printf("Digite a quantidade de vertices do grafo:  ");
     scanf("%d", &num_vertices);
     printf("Digite a quantidade maxima de arestas que os vertices podem ter:  ");
     scanf("%d", &grau_max);
@@ -57,14 +59,14 @@ int main() {
             scanf("%d", &inserir);
             inserir = (inserir != 1) ? 0 : 1; // Qualquer escolha diferente de 1 será considerado como alternativa 'NÃO'
         }
-    } while (inserir);
+    } while (inserir);*/
 
-    /*gr = cria_grafo(4, 3, 1);
+    gr = cria_grafo(4, 3, 1);
     inserir_aresta(gr, 0, 1, 1, 3);
-    inserir_aresta(gr, 1, 3, 1, 5);
-    inserir_aresta(gr, 1, 2, 1, 2);
-    inserir_aresta(gr, 2, 0, 1, 2);
-    inserir_aresta(gr, 2, 3, 1, 1);*/
+    inserir_aresta(gr, 0, 2, 1, 2);
+    inserir_aresta(gr, 1, 3, 1, 2);
+    inserir_aresta(gr, 2, 1, 1, 2);
+    inserir_aresta(gr, 2, 3, 1, 3);
 
     printf("\nInforme o vertice origem e o vertice destino para o calculo do menor caminho: ");
     scanf("%d %d", &v_origem, &v_destino);
@@ -74,6 +76,18 @@ int main() {
 
     menor_caminho(gr, v_origem, v_anterior, distancia);
 
+    printf("\n----------    DIJKSTRA    -----------");
+    printf("\nA menor distancia do vertice[%d] ate o vertice[%d] e: %.f", v_origem, v_destino, distancia[v_destino]);
+    printf("\nCaminho: ");
+    aux = v_anterior[v_destino];
+    while (aux != -1) {
+        printf("Vertice[%d]\t", aux);
+        aux = v_anterior[aux];
+    }
+
+    alg_guloso(gr, v_origem, v_anterior, distancia);
+
+    printf("\n\n----------    GULOSO    -----------");
     printf("\nA menor distancia do vertice[%d] ate o vertice[%d] e: %.f", v_origem, v_destino, distancia[v_destino]);
     printf("\nCaminho: ");
     aux = v_anterior[v_destino];
@@ -114,10 +128,8 @@ void liberar_grafo(Grafo* gr) {
             free(gr->arestas[i]);
         }
         free(gr->arestas);
-        if (gr->eh_ponderado) {
-            for (i = 0; i < gr->num_vertices; i++) {
-                free(gr->pesos[i]);
-            }
+        for (i = 0; i < gr->num_vertices; i++) {
+            free(gr->pesos[i]);
             free(gr->pesos);
         }
         free(gr->grau);
@@ -181,6 +193,51 @@ int procura_menor_distancia(float* dist, int* visitado, int nv) {
                 if (dist[menor] > dist[i])
                     menor = i;
             }
+        }
+    }
+    return menor;
+}
+
+void alg_guloso(Grafo* gr, int ini, int *ant, float* dist) {
+    int i, prox = ini, cont, u;
+    int *visitado;
+    cont = gr->num_vertices;
+    visitado = (int *) malloc(gr->num_vertices * sizeof (int));
+    for (i = 0; i < gr->num_vertices; i++) {
+        ant[i] = -1;
+        dist[i] = -1;
+        visitado[i] = 0;
+    }
+    visitado[ini] = 1;
+    dist[ini] = 0;
+    while (cont > 0) {
+        u = menor_guloso(gr, ini, visitado);
+        if (u == -1) break;
+        prox = gr->arestas[ini][u];
+        ant[prox] = ini;
+        visitado[prox] = 1;
+        cont--;
+        if (gr->eh_ponderado) {
+            dist[prox] = dist[ant[prox]] + gr->pesos[ini][u];
+        } else {
+            dist[prox] = dist[ant[prox]] + 1;
+        }
+        ini = prox;
+    }
+}
+
+int menor_guloso(Grafo* gr, int ini, int* visitado) {
+    int i, menor_dist = 1, primeiro = 1, menor = -1;
+    for (i = 0; i < gr->grau[ini]; i++) {
+        if (primeiro) {
+            if (visitado[gr->arestas[ini][i]] != 1) {
+                menor_dist = gr->pesos[ini][i];
+                primeiro = 0;
+                menor = i;
+            }
+        } else if (menor_dist > gr->pesos[ini][i] && visitado[gr->arestas[ini][i]] != 1) {
+            menor = gr->pesos[ini][i];
+            menor = i;
         }
     }
     return menor;
